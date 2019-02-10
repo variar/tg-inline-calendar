@@ -74,7 +74,7 @@ func (ck *CalendarKeyboard) GetReplyMarkup() tgbotapi.InlineKeyboardMarkup {
 
 	fmt.Println(daysInMonth)
 
-	dayRowsCount := int(math.Ceil(float64(daysInMonth) / 7))
+	dayRowsCount := int(math.Ceil(float64(daysInMonth+startDayOfWeek) / 7))
 	dayRows := make([][]tgbotapi.InlineKeyboardButton, dayRowsCount+1)
 
 	for row := range dayRows {
