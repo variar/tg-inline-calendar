@@ -11,15 +11,25 @@ import (
 	"gopkg.in/telegram-bot-api.v4"
 )
 
+type CalendarView int
+
+const (
+	MonthView CalendarView = 0
+	YearView  CalendarView = 1
+)
+
 //CalendarKeyboard holds internal calendar data and generates markup
 type CalendarKeyboard struct {
 	month int
 	year  int
+	view  CalendarView
 }
 
 const (
 	CallbackNextMonth  = "tginlinecalendar-next-month"
 	CallbackPrevMonth  = "tginlinecalendar-prev-month"
+	CallbackNextYear   = "tginlinecalendar-next-year"
+	CallbackPrevYear   = "tginlinecalendar-prev-year"
 	CallbackEmpty      = "tginlinecalendar-emtpy"
 	CallbackDatePrefix = "tginlinecalendar-date-"
 )
@@ -52,7 +62,28 @@ func (ck *CalendarKeyboard) PrevMonth() {
 	}
 }
 
+func (ck *CalendarKeyboard) NextYear() {
+	ck.year += 1
+}
+
+func (ck *CalendarKeyboard) PrevYear() {
+	ck.year -= 1
+}
+
+func (ck *CalendarKeyboard) SetViewMode(mode CalendarView) {
+	ck.view = mode
+}
+
 func (ck *CalendarKeyboard) GetReplyMarkup() tgbotapi.InlineKeyboardMarkup {
+	switch ck.view {
+	case YearView:
+		return ck.getYearReplyMarkup()
+	default:
+		return ck.getMonthReplyMarkup()
+	}
+}
+
+func (ck *CalendarKeyboard) getMonthReplyMarkup() tgbotapi.InlineKeyboardMarkup {
 
 	date := time.Date(ck.year, time.Month(ck.month), 1, 0, 0, 0, 0, time.UTC)
 
@@ -104,6 +135,33 @@ func (ck *CalendarKeyboard) GetReplyMarkup() tgbotapi.InlineKeyboardMarkup {
 	}
 
 	return tgbotapi.NewInlineKeyboardMarkup(append(dayRows, monthRow)...)
+}
+
+func (ck *CalendarKeyboard) getYearReplyMarkup() tgbotapi.InlineKeyboardMarkup {
+
+	date := time.Date(ck.year, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	yearRow := make([]tgbotapi.InlineKeyboardButton, 3)
+	yearRow[0] = tgbotapi.NewInlineKeyboardButtonData("<", CallbackPrevYear)
+	yearRow[1] = tgbotapi.NewInlineKeyboardButtonData(date.Format("2006"), CallbackEmpty)
+	yearRow[2] = tgbotapi.NewInlineKeyboardButtonData(">", CallbackNextYear)
+
+	monthRows := make([][]tgbotapi.InlineKeyboardButton, 4)
+
+	for row := range monthRows {
+		monthRows[row] = make([]tgbotapi.InlineKeyboardButton, 3)
+
+		for col := range monthRows[row] {
+			index := col + row*3
+			monthDate := time.Date(ck.year, time.Month(index+1), 1, 0, 0, 0, 0, time.UTC)
+
+			monthRows[row][col] = tgbotapi.NewInlineKeyboardButtonData(
+				monthDate.Format("Jan 2006"),
+				fmt.Sprintf("%s%d-%d-%d", CallbackDatePrefix, ck.year, index+1, 1))
+		}
+	}
+
+	return tgbotapi.NewInlineKeyboardMarkup(append(monthRows, yearRow)...)
 }
 
 // daysIn returns the number of days in a month for a given year.
